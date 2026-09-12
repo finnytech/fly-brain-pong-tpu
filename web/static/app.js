@@ -307,31 +307,48 @@ function renderPongArena() {
   const toScreenX = (gx) => ((gx + 1.0) / 2.0) * (w - 60) + 30;
   const toScreenY = (gy) => ((-gy + 1.0) / 2.0) * (h - 60) + 30;
 
-  // 1. Draw Ball Trail
-  ballTrail.push({ x: toScreenX(latestData.ball.x), y: toScreenY(latestData.ball.y) });
-  if (ballTrail.length > 14) ballTrail.shift();
+  const curBx = toScreenX(latestData.ball.x);
+  const curBy = toScreenY(latestData.ball.y);
+
+  // 1. Draw Ball Trail (Detect jump/reset and clear trail)
+  if (ballTrail.length > 0) {
+    const lastPt = ballTrail[ballTrail.length - 1];
+    const distSq = (lastPt.x - curBx) * (lastPt.x - curBx) + (lastPt.y - curBy) * (lastPt.y - curBy);
+    if (distSq > 100 * 100) {
+      ballTrail = []; // Reset trail on score/respawn!
+    }
+  }
+  ballTrail.push({ x: curBx, y: curBy });
+  if (ballTrail.length > 10) ballTrail.shift();
 
   for (let i = 0; i < ballTrail.length; i++) {
     const pt = ballTrail[i];
-    const alpha = (i / ballTrail.length) * 0.5;
+    const alpha = (i / ballTrail.length) * 0.45;
     ctx.fillStyle = `rgba(251, 191, 36, ${alpha})`;
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, 4 * (i / ballTrail.length), 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // 2. Draw Ball
-  const bx = toScreenX(latestData.ball.x);
-  const by = toScreenY(latestData.ball.y);
-
+  // 2. Draw Ball with Smooth Glow
   ctx.save();
   ctx.shadowColor = '#fbbf24';
   ctx.shadowBlur = 18;
   ctx.fillStyle = '#fef08a';
   ctx.beginPath();
-  ctx.arc(bx, by, 9, 0, Math.PI * 2);
+  ctx.arc(curBx, curBy, 8, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+
+  // If ball is centered (Serving / Respawning), draw a subtle pulsing halo
+  if (Math.abs(latestData.ball.x) < 0.02 && Math.abs(latestData.ball.y) < 0.02) {
+    const pulse = (Math.sin(Date.now() * 0.008) + 1.0) * 8;
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(curBx, curBy, 12 + pulse, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   // 3. Draw Shockwaves
   for (let i = shockwaves.length - 1; i >= 0; i--) {
@@ -349,8 +366,8 @@ function renderPongArena() {
     ctx.stroke();
   }
 
-  // 4. Draw Animated Flies
-  const pHeight = 85;
+  // 4. Draw Animated Flies (Paddle height 55px matching 0.22 arena scale)
+  const pHeight = 55;
   const p1x = toScreenX(-0.85);
   const p1y = toScreenY(latestData.paddle1_y);
   drawAnimatedFly(p1x, p1y, true, pHeight, latestData.fly1.octopamine_arousal, '#10b981', true);

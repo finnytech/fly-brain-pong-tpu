@@ -27,7 +27,7 @@ class TwoFlyPongEnv:
     Continuous 2-player Pong match between Fly 1 (Left) and Fly 2 (Right).
     Coordinates: x in [-1.0, 1.0], y in [-1.0, 1.0].
     """
-    def __init__(self, visual_res: int = 16, paddle_height: float = 0.3, paddle_speed: float = 0.05):
+    def __init__(self, visual_res: int = 16, paddle_height: float = 0.22, paddle_speed: float = 0.055):
         self.visual_res = visual_res
         self.paddle_height = paddle_height
         self.paddle_speed = paddle_speed
