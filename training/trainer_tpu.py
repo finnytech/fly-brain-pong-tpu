@@ -56,9 +56,27 @@ class TpuFlyPongTrainer:
         if HAS_JAX:
             try:
                 devices = jax.devices()
-                dev_kind = devices[0].platform
-                dev_desc = f"JAX {dev_kind.upper()} ({len(devices)} device(s): {devices[0].device_kind})"
-                print(f"[TPU-Engine] Active accelerator: {dev_desc}")
+                dev_kind = devices[0].platform.lower()
+                kind_str = str(devices[0].device_kind).lower()
+                
+                if "tpu" in dev_kind or "tpu" in kind_str:
+                    if "v6e" in kind_str or "v6" in kind_str:
+                        dev_desc = f"Google TPU v6e-1 (Trillium {len(devices)} chip) - Max Speed"
+                    elif "v5e" in kind_str:
+                        dev_desc = f"Google TPU v5e ({len(devices)} chip)"
+                    else:
+                        dev_desc = f"Google TPU ({devices[0].device_kind})"
+                elif "gpu" in dev_kind or "cuda" in dev_kind:
+                    if "a100" in kind_str:
+                        dev_desc = f"NVIDIA A100 Tensor Core GPU ({devices[0].device_kind})"
+                    elif "l4" in kind_str:
+                        dev_desc = f"NVIDIA L4 Ada Lovelace GPU ({devices[0].device_kind})"
+                    else:
+                        dev_desc = f"NVIDIA GPU ({devices[0].device_kind})"
+                else:
+                    dev_desc = f"JAX {dev_kind.upper()} ({devices[0].device_kind})"
+                    
+                print(f"\n[Hardware-Engine] >>> ACCELERATOR DETECTED: {dev_desc} <<<")
                 return dev_desc
             except Exception as e:
                 return f"JAX CPU (Fallback: {e})"

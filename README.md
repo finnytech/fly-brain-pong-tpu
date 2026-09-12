@@ -1,8 +1,23 @@
-# 🪰 Drosophila Connectome Pong: TPU v5e Neuro-Arena
+# 🪰 Drosophila Connectome Pong: TPU v6e-1 (Trillium) & NVIDIA A100 / L4 Lab
 
 Biologisch-realistische Reinforcement-Learning Simulation zweier virtueller Fruchtfliegen-Gehirne (*Drosophila melanogaster*), die in einer interaktiven 60 FPS Cyberpunk-Arena gegeneinander Pong spielen.
 
 Basierend auf den wissenschaftlich kartierten neuronalen Schaltkreisen des vollständigen adulten Fruchtfliegen-Konnektoms (**FlyWire Consortium / Nature Oktober 2024**).
+
+---
+
+## ⚡ Unterstützte Hardware-Beschleuniger
+
+Das System erkennt automatisch die aktive Colab-Laufzeit und kompiliert die XLA-Kernel optimal:
+
+1. **Google TPU v6e-1 (Trillium)** ⭐ *(Höchste Empfehlung)*:
+   - Googles neueste Flaggschiff-TPU.
+   - Bis zu **4,7-fache Peak-Rechenleistung** und doppelte Speicherbandbreite gegenüber v5e.
+   - JAX läuft nativ mit maximaler XLA-Parallelisierung.
+2. **NVIDIA A100-SXM4 / PCIe (40GB / 80GB)**:
+   - Extrem hohe Tensor-Core Rechenleistung via CUDA 12.
+3. **NVIDIA L4 GPU**:
+   - Moderne Ada-Lovelace Architektur mit hoher Energieeffizienz.
 
 ---
 
@@ -46,8 +61,7 @@ Kein abstraktes MLP, sondern eine authentische Nachbildung der Drosophila-Subsch
 
 ## 🚀 Moderne Web-Applikation (Kein Gradio!)
 
-Das System nutzt eine eigens entwickelte, hardwarebeschleunigte Web-Oberfläche:
-- **60 FPS HTML5 Canvas Pong**: Die Schläger sind **lebendig animierte Fruchtfliegen**, deren Flügel je nach Erregungszustand (Octopamin-Spiegel) realistisch flattern. Mit Ballschweif und Kollisionsfunken.
+- **60 FPS HTML5 Canvas Pong**: Die Schläger sind **lebendig animierte Fruchtfliegen**, deren Flügel je nach Erregungszustand (Octopamin-Spiegel) flattern.
 - **Interaktive 3D-Konnektom-Gehirnkarten (Three.js WebGL)**:
   - Zeigt für beide Fliegen die 3D-Gehirnareale (*Optic Lobe*, *Central Complex*, *Mushroom Body*, *Descending Neurons*).
   - **Happy vs. Sauer (Dynamic Glow)**:
@@ -56,18 +70,35 @@ Das System nutzt eine eigens entwickelte, hardwarebeschleunigte Web-Oberfläche:
   - Per Maus frei im 3D-Raum rotierbar.
 - **RL-Skill-Level & Loss-Graphen**:
   - Dynamisches Skill-Tier: *Larva (Lvl 1)* $\to$ *Pupa (Lvl 12)* $\to$ *Fly Pilot (Lvl 35)* $\to$ *Connectome Ace (Lvl 70)* $\to$ *Apex Drosophila*.
-  - Trefferquoten, Gesamt-Hits und Echtzeit-Verlauf des RL Policy Loss via Chart.js.
 
 ---
 
-## ⚡ Schnellstart in Google Colab (TPU v5e)
+## ⚡ Schnellstart in Google Colab (TPU v6e-1 oder A100)
 
-1. Öffne [Google Colab](https://colab.research.google.com/) und wähle unter **Laufzeit > Laufzeittyp ändern** als Beschleuniger **TPU v5e**.
-2. Lade das Notebook [`colab_fly_brain_pong.ipynb`](colab_fly_brain_pong.ipynb) hoch.
-3. Starte die Zellen nacheinander:
-   - Mountet Google Drive für das 20-Minuten-Autosave.
-   - Installiert die Pakete (`fastapi`, `uvicorn`, `websockets`, `jax[tpu]`, etc.).
-   - Startet den WebSocket-Server und den sicheren, kostenlosen öffentlichen Tunnel.
+1. Öffne Google Colab und wähle unter **Laufzeit > Laufzeittyp ändern** entweder:
+   - **TPU v6e-1** (Empfohlen für maximale native Geschwindigkeit), oder
+   - **A100 GPU**
+2. Führe folgende Zellen aus:
+
+```bash
+# 1. Repository clonen
+!git clone https://github.com/finnytech/fly-brain-pong-tpu.git
+%cd fly-brain-pong-tpu
+
+# 2. Smarte Installation (erkennt automatisch TPU v6e-1 oder A100 CUDA)
+!pip install -r requirements.txt
+
+# 3. Google Drive mounten für 20-Minuten-Dauerspeicherung
+from google.colab import drive
+drive.mount('/content/drive')
+
+# 4. Cloudflare Tunnel & Hauptskript starten
+!curl -s https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb && dpkg -i cloudflared.deb > /dev/null
+!cloudflared tunnel --url http://localhost:8000 > tunnel.log 2>&1 &
+import time; time.sleep(4)
+!grep -o 'https://.*\.trycloudflare\.com' tunnel.log | head -n 1
+!python main.py --port 8000 --checkpoint-interval 20.0
+```
 
 ---
 
@@ -76,28 +107,3 @@ Das System nutzt eine eigens entwickelte, hardwarebeschleunigte Web-Oberfläche:
 - Speichert **alle 20 Minuten (1200 Sekunden)** automatisch den kompletten synaptischen Zustand beider Fliegenhirne als `safetensors`.
 - In Colab direkt in `/content/drive/MyDrive/fly_brain_checkpoints/`.
 - Nach Disconnects oder Neustarts wird automatisch der aktuellste Checkpoint geladen.
-- Ein manueller Save-Button im Dashboard erlaubt jederzeit sofortiges Sichern.
-
----
-
-## 💻 Lokale Ausführung
-
-```powershell
-# Abhängigkeiten installieren
-pip install -r requirements.txt
-
-# Web-App & Server starten (Port 8000)
-python main.py --port 8000
-
-# Browser öffnen: http://localhost:8000
-```
-
----
-
-## 🚀 Push in dein privates GitHub-Repository
-
-```powershell
-cd D:\fly_brain_pong_tpu
-git remote add origin https://github.com/finnytech/<dein-privates-repo-name>.git
-git push -u origin main
-```
