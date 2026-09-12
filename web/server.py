@@ -63,7 +63,7 @@ async def websocket_stream(websocket: WebSocket):
             # Step environment forward if not running in a separate thread
             if hasattr(trainer_instance, "step_visual_match"):
                 step_res = trainer_instance.step_visual_match()
-                env_s = trainer_instance.env_state
+                env_s = getattr(trainer_instance, 'env_state', getattr(trainer_instance, 'ref_env', None))
                 metrics = trainer_instance.get_live_metrics()
                 payload = {
                     "ball": {

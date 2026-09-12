@@ -88,6 +88,10 @@ class RealTpuPpoTrainer:
             
         # Checkpointer (20 minutes)
         self.checkpointer = FlyBrainCheckpointer(interval_minutes=checkpoint_interval_minutes)
+
+    @property
+    def env_state(self):
+        return self.ref_env
         
         # Real Training Metrics
         self.step_counter = 0
