@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🪰 Drosophila Connectome Pong: TPU v5e Neuro-Arena</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <!-- Three.js for 3D Brain Visualizations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Chart.js for Loss & Telemetry Graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- TOP CONTROL & STATUS BAR -->
+  <header class="top-bar">
+    <div class="logo-group">
+      <span class="fly-icon">🪰</span>
+      <div>
+        <h1>DROSOPHILA CONNECTOME PONG</h1>
+        <div class="sub-title">TPU v5e Autonomous Bio-Reinforcement Learning Lab (Nature 2024 Connectome)</div>
+      </div>
+    </div>
+    
+    <div class="stats-group">
+      <div class="stat-pill">
+        <span class="led led-green" id="led-tpu"></span>
+        <span class="label">ENGINE:</span>
+        <span class="value" id="val-device">JAX TPU v5e</span>
+      </div>
+      <div class="stat-pill">
+        <span class="led led-cyan" id="led-ws"></span>
+        <span class="label">SPEED:</span>
+        <span class="value" id="val-fps">0 FPS</span>
+      </div>
+      <div class="stat-pill">
+        <span class="led led-amber" id="led-ckpt"></span>
+        <span class="label">20-MIN AUTOSAVE:</span>
+        <span class="value timer-accent" id="val-timer">20:00</span>
+      </div>
+      <button id="btn-save-now" class="action-btn" title="Synapsen jetzt manuell speichern">💾 SAVE NOW</button>
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD GRID -->
+  <main class="dashboard-grid">
+    
+    <!-- LEFT COLUMN: FLY 1 (GREEN) -->
+    <section class="side-panel panel-fly1">
+      <div class="panel-header">
+        <div class="badge badge-fly1">FLY 1 • LEFT PADDLE</div>
+        <div class="mood-tag" id="fly1-mood">NEUTRAL</div>
+      </div>
+
+      <!-- 3D BRAIN CONTAINER -->
+      <div class="brain-3d-wrapper">
+        <div class="brain-overlay-title">🧠 3D Connectome (Left Fly)</div>
+        <div id="brain3d-fly1" class="brain3d-canvas-container"></div>
+        <div class="brain-legend">
+          <span class="leg-dot leg-optic"></span> Optic Lobe
+          <span class="leg-dot leg-cx"></span> CX Ring
+          <span class="leg-dot leg-mb"></span> MB Lobes
+        </div>
+      </div>
+
+      <!-- BIO-CHEMISTRY GAUGES: HAPPY VS SAUER -->
+      <div class="gauges-container">
+        <div class="gauge-row">
+          <span class="gauge-label">✨ PAM Dopamin (Happy/Win):</span>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-dopamine" id="fly1-bar-dopamine" style="width: 0%"></div>
+          </div>
+          <span class="gauge-val" id="fly1-val-dopamine">0.00</span>
+        </div>
+
+        <div class="gauge-row">
+          <span class="gauge-label">⚡ PPL1 Stress/Pain (Sauer/Loss):</span>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-stress" id="fly1-bar-stress" style="width: 0%"></div>
+          </div>
+          <span class="gauge-val" id="fly1-val-stress">0.00</span>
+        </div>
+
+        <div class="gauge-row">
+          <span class="gauge-label">🔥 Octopamin (Arousal/Flap):</span>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-arousal" id="fly1-bar-arousal" style="width: 50%"></div>
+          </div>
+          <span class="gauge-val" id="fly1-val-arousal">0.50</span>
+        </div>
+      </div>
+
+      <!-- RL SKILL LEVEL CARD -->
+      <div class="skill-card">
+        <div class="skill-card-top">
+          <span class="skill-rank-title">RL SKILL TIER:</span>
+          <span class="skill-rank-badge" id="fly1-skill-rank">LARVA (LVL 1)</span>
+        </div>
+        <div class="skill-meter-bg">
+          <div class="skill-meter-fill" id="fly1-skill-bar" style="width: 10%"></div>
+        </div>
+        <div class="skill-stats-row">
+          <div><span class="dim">Hit Rate:</span> <b id="fly1-hitrate">0.0%</b></div>
+          <div><span class="dim">Total Hits:</span> <b id="fly1-totalhits">0</b></div>
+          <div><span class="dim">RL Loss:</span> <b id="fly1-loss">0.421</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: PONG ARENA WITH ANIMATED FLIES -->
+    <section class="center-panel">
+      <!-- SCOREBOARD -->
+      <div class="scoreboard">
+        <div class="score-box score-fly1">
+          <span class="score-name">FLY 1 (GREEN)</span>
+          <span class="score-number" id="score-fly1">0</span>
+        </div>
+        
+        <div class="rally-box">
+          <div class="rally-label">CURRENT RALLY</div>
+          <div class="rally-count" id="rally-current">0</div>
+          <div class="rally-best" id="rally-best">BEST: 0</div>
+        </div>
+
+        <div class="score-box score-fly2">
+          <span class="score-name">FLY 2 (PURPLE)</span>
+          <span class="score-number" id="score-fly2">0</span>
+        </div>
+      </div>
+
+      <!-- 60 FPS PONG CANVAS -->
+      <div class="arena-canvas-container">
+        <canvas id="pongCanvas" width="760" height="460"></canvas>
+        <div class="arena-hints">
+          <span>🪰 Animated flies flap wings based on biological arousal</span>
+          <span>⚡ Glowing ball with physics trails & shockwaves</span>
+        </div>
+      </div>
+
+      <!-- BOTTOM TELEMETRY / LOSS CHART -->
+      <div class="telemetry-chart-container">
+        <div class="chart-header">
+          <span>📈 Real-Time RL Policy & Value Loss Progression</span>
+          <span class="dim" id="step-counter">Steps: 0</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="lossChart" height="120"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: FLY 2 (PURPLE) -->
+    <section class="side-panel panel-fly2">
+      <div class="panel-header">
+        <div class="badge badge-fly2">FLY 2 • RIGHT PADDLE</div>
+        <div class="mood-tag" id="fly2-mood">NEUTRAL</div>
+      </div>
+
+      <!-- 3D BRAIN CONTAINER -->
+      <div class="brain-3d-wrapper">
+        <div class="brain-overlay-title">🧠 3D Connectome (Right Fly)</div>
+        <div id="brain3d-fly2" class="brain3d-canvas-container"></div>
+        <div class="brain-legend">
+          <span class="leg-dot leg-optic"></span> Optic Lobe
+          <span class="leg-dot leg-cx"></span> CX Ring
+          <span class="leg-dot leg-mb"></span> MB Lobes
+        </div>
+      </div>
+
+      <!-- BIO-CHEMISTRY GAUGES: HAPPY VS SAUER -->
+      <div class="gauges-container">
+        <div class="gauge-row">
+          <span class="gauge-label">✨ PAM Dopamin (Happy/Win):</span>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-dopamine" id="fly2-bar-dopamine" style="width: 0%"></div>
+          </div>
+          <span class="gauge-val" id="fly2-val-dopamine">0.00</span>
+        </div>
+
+        <div class="gauge-row">
+          <span class="gauge-label">⚡ PPL1 Stress/Pain (Sauer/Loss):</span>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-stress" id="fly2-bar-stress" style="width: 0%"></div>
+          </div>
+          <span class="gauge-val" id="fly2-val-stress">0.00</span>
+        </div>
+
+        <div class="gauge-row">
+          <span class="gauge-label">🔥 Octopamin (Arousal/Flap):</span>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-arousal" id="fly2-bar-arousal" style="width: 50%"></div>
+          </div>
+          <span class="gauge-val" id="fly2-val-arousal">0.50</span>
+        </div>
+      </div>
+
+      <!-- RL SKILL LEVEL CARD -->
+      <div class="skill-card">
+        <div class="skill-card-top">
+          <span class="skill-rank-title">RL SKILL TIER:</span>
+          <span class="skill-rank-badge rank-purple" id="fly2-skill-rank">LARVA (LVL 1)</span>
+        </div>
+        <div class="skill-meter-bg">
+          <div class="skill-meter-fill fill-purple" id="fly2-skill-bar" style="width: 10%"></div>
+        </div>
+        <div class="skill-stats-row">
+          <div><span class="dim">Hit Rate:</span> <b id="fly2-hitrate">0.0%</b></div>
+          <div><span class="dim">Total Hits:</span> <b id="fly2-totalhits">0</b></div>
+          <div><span class="dim">RL Loss:</span> <b id="fly2-loss">0.435</b></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

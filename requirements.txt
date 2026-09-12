@@ -1,0 +1,14 @@
+# Core JAX / Machine Learning (TPU v5e compatible)
+jax>=0.4.26
+flax>=0.8.2
+optax>=0.2.2
+numpy>=1.24.0
+
+# Storage & Checkpointing
+safetensors>=0.4.2
+pillow>=10.0.0
+
+# Custom 60 FPS Web App & WebSockets (No Gradio)
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+websockets>=12.0

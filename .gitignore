@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Checkpoints and models (large binary weights)
+checkpoints/*.safetensors
+checkpoints/*.npz
+checkpoints/*.pkl
+!checkpoints/.gitkeep
+
+# Colab / Jupyter checkpoints
+.ipynb_checkpoints*/
+
+# Logs & temp files
+*.log
+*.tmp
+
+# Virtual envs
+.venv/
+venv/
+env/
