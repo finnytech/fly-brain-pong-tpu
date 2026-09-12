@@ -108,27 +108,63 @@ async def websocket_stream(websocket: WebSocket):
 def start_public_tunnel(port: int = 8000) -> Optional[subprocess.Popen]:
     """
     Launches a safe, short-use public tunnel (Localtunnel / Cloudflared).
-    Useful for Colab or quick remote inspection.
+    Reads the real generated public URL and prints it prominently in the console.
     """
-    print(f"\n[Tunnel] Initializing safe ephemeral public web host for port {port}...")
+    import re
+    import sys
+    import threading
+
+    def monitor_tunnel_output(proc):
+        url_found = False
+        for line in iter(proc.stdout.readline, ''):
+            if not line:
+                break
+            if "trycloudflare.com" in line:
+                match = re.search(r'https://[a-zA-Z0-9-]+\.trycloudflare\.com', line)
+                if match and not url_found:
+                    url = match.group(0)
+                    url_found = True
+                    print("\n" + "=" * 70, flush=True)
+                    print(f"🎉 DEIN ECHTER ÖFFENTLICHER LINK IST BEREIT:", flush=True)
+                    print(f"👉👉 {url} 👈👈", flush=True)
+                    print("=" * 70 + "\n", flush=True)
+                    try:
+                        with open("live_url.txt", "w") as f:
+                            f.write(url)
+                    except Exception:
+                        pass
+            elif "localtunnel.me" in line:
+                print(f"\n👉 Localtunnel URL: {line.strip()}", flush=True)
+
+    print(f"\n[Tunnel] Initializing safe ephemeral public web host for port {port}...", flush=True)
     
     # 1. Try Cloudflared
     if shutil.which("cloudflared"):
-        proc = subprocess.Popen(["cloudflared", "tunnel", "--url", f"http://localhost:{port}"],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        print("⚡ Cloudflare Tunnel started! Watch terminal for https://xxxx.trycloudflare.com URL.")
+        proc = subprocess.Popen(
+            ["cloudflared", "tunnel", "--url", f"http://localhost:{port}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        t = threading.Thread(target=monitor_tunnel_output, args=(proc,), daemon=True)
+        t.start()
         return proc
         
     # 2. Try Localtunnel via npx
     if shutil.which("npx"):
-        proc = subprocess.Popen(["npx", "-y", "localtunnel", "--port", str(port)],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        print("⚡ Localtunnel started via npx! Watch terminal for public URL.")
+        proc = subprocess.Popen(
+            ["npx", "-y", "localtunnel", "--port", str(port)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        t = threading.Thread(target=monitor_tunnel_output, args=(proc,), daemon=True)
+        t.start()
         return proc
 
-    print("ℹ️ Note: For public viewing in Google Colab, use:")
-    print(f"   !npx localtunnel --port {port}")
-    print(f"   Or: from google.colab.output import serve_kernel_port_as_window; serve_kernel_port_as_window({port})")
+    print("ℹ️ Note: No tunnel tool found (install cloudflared or npx for public links).", flush=True)
     return None
 
 def run_server(trainer: TpuFlyPongTrainer, host: str = "0.0.0.0", port: int = 8000, public: bool = False):
