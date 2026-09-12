@@ -61,40 +61,70 @@ async def websocket_stream(websocket: WebSocket):
     try:
         while True:
             # Step environment forward if not running in a separate thread
-            if not trainer_instance.is_running:
-                step_res = trainer_instance.step_once()
-                events = step_res["events"]
-            else:
-                events = None
-
-            metrics = trainer_instance.get_live_metrics()
-            env = trainer_instance.env
-
-            payload = {
-                "ball": {
-                    "x": env.ball_x,
-                    "y": env.ball_y,
-                    "vx": env.ball_vx,
-                    "vy": env.ball_vy,
-                },
-                "paddle1_y": env.paddle1_y,
-                "paddle2_y": env.paddle2_y,
-                "score1": env.score1,
-                "score2": env.score2,
-                "rally": env.rally,
-                "steps": metrics["steps"],
-                "fps": metrics["fps"],
-                "device": metrics["device"],
-                "timer": metrics["checkpoint_timer"],
-                "fly1": metrics["fly1"],
-                "fly2": metrics["fly2"],
-                "events": {
-                    "fly1_hit": events.fly1_hit if events else False,
-                    "fly2_hit": events.fly2_hit if events else False,
-                    "fly1_point_won": events.fly1_point_won if events else False,
-                    "fly2_point_won": events.fly2_point_won if events else False,
+            if hasattr(trainer_instance, "step_visual_match"):
+                step_res = trainer_instance.step_visual_match()
+                env_s = trainer_instance.env_state
+                metrics = trainer_instance.get_live_metrics()
+                payload = {
+                    "ball": {
+                        "x": float(env_s.ball_x),
+                        "y": float(env_s.ball_y),
+                        "vx": float(env_s.ball_vx),
+                        "vy": float(env_s.ball_vy),
+                    },
+                    "paddle1_y": float(env_s.paddle1_y),
+                    "paddle2_y": float(env_s.paddle2_y),
+                    "score1": int(env_s.score1),
+                    "score2": int(env_s.score2),
+                    "rally": int(env_s.rally),
+                    "steps": metrics["steps"],
+                    "fps": metrics["fps"],
+                    "device": metrics["device"],
+                    "timer": metrics["checkpoint_timer"],
+                    "fly1": metrics["fly1"],
+                    "fly2": metrics["fly2"],
+                    "events": {
+                        "fly1_hit": float(step_res.get("reward1", 0.0)) > 1.0,
+                        "fly2_hit": float(step_res.get("reward2", 0.0)) > 1.0,
+                        "fly1_point_won": False,
+                        "fly2_point_won": False,
+                    }
                 }
-            }
+            else:
+                if not trainer_instance.is_running:
+                    step_res = trainer_instance.step_once()
+                    events = step_res["events"]
+                else:
+                    events = None
+
+                metrics = trainer_instance.get_live_metrics()
+                env = trainer_instance.env
+
+                payload = {
+                    "ball": {
+                        "x": env.ball_x,
+                        "y": env.ball_y,
+                        "vx": env.ball_vx,
+                        "vy": env.ball_vy,
+                    },
+                    "paddle1_y": env.paddle1_y,
+                    "paddle2_y": env.paddle2_y,
+                    "score1": env.score1,
+                    "score2": env.score2,
+                    "rally": env.rally,
+                    "steps": metrics["steps"],
+                    "fps": metrics["fps"],
+                    "device": metrics["device"],
+                    "timer": metrics["checkpoint_timer"],
+                    "fly1": metrics["fly1"],
+                    "fly2": metrics["fly2"],
+                    "events": {
+                        "fly1_hit": events.fly1_hit if events else False,
+                        "fly2_hit": events.fly2_hit if events else False,
+                        "fly1_point_won": events.fly1_point_won if events else False,
+                        "fly2_point_won": events.fly2_point_won if events else False,
+                    }
+                }
 
             await websocket.send_json(payload)
             # ~60 FPS target (16 ms)
